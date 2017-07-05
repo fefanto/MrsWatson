@@ -11,6 +11,8 @@ BEWARE! --------------------------------------------------
         - to restore the latency compensation feature
         - to have an output file exactly the same size as the input file
         (which means that reverbs/delay tails won't work well here)
+
+    this mrswatson version will be released only on windows (see bin folder)
 ----------------------------------------------------------
 
 
