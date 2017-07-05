@@ -40,6 +40,7 @@ SampleBuffer newSampleBuffer(ChannelCount numChannels, SampleCount blocksize) {
   SampleBuffer sampleBuffer = (SampleBuffer)malloc(sizeof(SampleBufferMembers));
   sampleBuffer->numChannels = numChannels;
   sampleBuffer->blocksize = blocksize;
+  sampleBuffer->validSamples = 0;
   sampleBuffer->samples = (Samples *)malloc(sizeof(Samples) * numChannels);
 
   for (ChannelCount i = 0; i < numChannels; i++) {
@@ -54,6 +55,7 @@ void sampleBufferClear(SampleBuffer self) {
   for (ChannelCount i = 0; i < self->numChannels; i++) {
     memset(self->samples[i], 0, sizeof(Sample) * self->blocksize);
   }
+  self->validSamples = 0;
 }
 
 boolByte sampleBufferCopyAndMapChannelsWithOffset(

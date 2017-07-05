@@ -180,6 +180,8 @@ boolByte _readBlockFromAudiofile(void *selfPtr, SampleBuffer sampleBuffer) {
   // Set the blocksize of the sample buffer to be the number of frames read
   sampleBuffer->blocksize = (SampleCount)numFramesRead;
   self->numSamplesProcessed += sampleBuffer->blocksize;
+  
+    logDebug("[MN] ReadBlockFromAudioFile: samples read = %ld ", numFramesRead);
 
   if (numFramesRead == 0) {
     logDebug("End of audio file reached");
@@ -200,12 +202,27 @@ boolByte _writeBlockToAudiofile(void *selfPtr,
   const AFframecount numSamplesToWrite = sampleBuffer->blocksize;
   AFframecount numFramesWritten = 0;
 
+  /*
+   [MN] this should be the delay compensation bug --> the buffer is written using the global
+        getBlocksize(), which always returns the block-size parameter.
+        when the first partial buffer is written, due to blocksize <> plugin delay, the amount
+        should be buffer->blocksize (set in mrswatson.c::writeoutput)
+   */
   extraData->pcmSampleBuffer->setSampleBuffer(extraData->pcmSampleBuffer,
                                               sampleBuffer);
+
+//  numFramesWritten = afWriteFrames(extraData->fileHandle, AF_DEFAULT_TRACK,
+//                                   extraData->pcmSampleBuffer->pcmSamples,
+//                                   (int)getBlocksize());
+//  self->numSamplesProcessed += getBlocksize() * getNumChannels();
+    
+  logDebug("[MN] writing (%lu) samples to file.",sampleBuffer->blocksize);
+    
   numFramesWritten = afWriteFrames(extraData->fileHandle, AF_DEFAULT_TRACK,
-                                   extraData->pcmSampleBuffer->pcmSamples,
-                                   (int)getBlocksize());
-  self->numSamplesProcessed += getBlocksize() * getNumChannels();
+                                     extraData->pcmSampleBuffer->pcmSamples,
+                                     (int)sampleBuffer->blocksize);
+  self->numSamplesProcessed += sampleBuffer->blocksize * getNumChannels();
+
 
   if (numFramesWritten == -1) {
     logWarn("audiofile encountered an error when writing to file");

@@ -117,6 +117,19 @@ static void printWelcomeMessage(int argc, char **argv) {
 }
 
 static void printVersion(void) {
+  printf("BEWARE! --------------------------------------------------\n\n");
+  printf("\tthis mrswatson version is based on mrswatson 0.9.8.\n");
+  printf("\tby teragon audio\n");
+  printf("\tthe code for this version is available at :\n");
+  printf("\thttps://github.com/fefanto/MrsWatson\n");
+  printf("\tthe purpose of this version is :\n");
+  printf("\t\t- to restore the latency compensation feature\n");
+  printf("\t\t- to have an output file exactly the same size as the input file\n");
+  printf("\t\t- (this means that this won't play well with reverbs/delays etc.)\n");
+  printf("----------------------------------------------------------\n\n");
+
+    
+    
   CharString versionString = buildInfoGetVersionString();
   CharString wrappedLicenseInfo;
   CharString licenseString = newCharStringWithCString(LICENSE_STRING);
@@ -252,15 +265,25 @@ boolByte readInput(SampleSource inputSource, SampleBuffer buffer) {
   framesRead = buffer->blocksize;
 
   if (framesRead == bufferSize) {
+    buffer->validSamples = bufferSize;
     // We have filled up the buffer, so return true to ask for more input
     return true;
   } else if (framesRead < bufferSize) {
+      buffer->validSamples = framesRead;
+    
+    /*
+     [MN] this happens at the end of the file : a silence buffer fills the remaining smaples
+     probably to let the plugin process a whole buffer.
+     But how do I tell the audio writer that Only 'framesRead' samples will be meaningful for writing?
+    */
+    
     // Partial read, meaning that we have reached the end of file
     unsigned long numberOfFrames = (bufferSize - framesRead);
     SampleBuffer silenceBuffer =
         newSampleBuffer(buffer->numChannels, numberOfFrames);
 
     buffer->blocksize = framesRead + numberOfFrames;
+    buffer->validSamples = framesRead;
     sampleBufferCopyAndMapChannelsWithOffset(buffer, framesRead, silenceBuffer,
                                              0, numberOfFrames);
     freeSampleBuffer(silenceBuffer);
@@ -287,10 +310,8 @@ boolByte readInput(SampleSource inputSource, SampleBuffer buffer) {
  */
 void writeOutput(SampleSource outputSource, SampleSource silenceSource,
                  SampleBuffer buffer, unsigned long skipHeadFrames) {
-  unsigned long framesSkipped =
-      silenceSource->numSamplesProcessed / buffer->numChannels;
-  unsigned long framesProcessed =
-      framesSkipped + outputSource->numSamplesProcessed / buffer->numChannels;
+  unsigned long framesSkipped = silenceSource->numSamplesProcessed / buffer->numChannels;
+  unsigned long framesProcessed = framesSkipped + outputSource->numSamplesProcessed / buffer->numChannels;
   unsigned long nextBlockStart = framesProcessed + buffer->blocksize;
 
   if (framesProcessed != getAudioClock()->currentFrame) {
@@ -302,7 +323,9 @@ void writeOutput(SampleSource outputSource, SampleSource silenceSource,
   if (nextBlockStart <= skipHeadFrames) {
     // Cutting away the whole block. nothing is written to the outputSource
     silenceSource->writeSampleBlock(silenceSource, buffer);
-  } else if (framesProcessed < skipHeadFrames &&
+  }
+  // [MN] cut part of the buffer corresponding to the plugin delay
+  else if (framesProcessed < skipHeadFrames &&
              skipHeadFrames < nextBlockStart) {
     SampleBuffer sourceBuffer =
         newSampleBuffer(buffer->numChannels, buffer->blocksize);
@@ -311,14 +334,12 @@ void writeOutput(SampleSource outputSource, SampleSource silenceSource,
 
     // Cutting away start part of the block.
     sourceBuffer->blocksize = skippedFrames;
-    sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, 0,
-                                             sourceBuffer->blocksize);
+    sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, 0,sourceBuffer->blocksize);
     silenceSource->writeSampleBlock(silenceSource, sourceBuffer);
 
     // Writing remaining end part of the block.
     sourceBuffer->blocksize = soundFrames;
-    sampleBufferCopyAndMapChannelsWithOffset(
-        sourceBuffer, 0, buffer, skippedFrames, sourceBuffer->blocksize);
+    sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, skippedFrames, sourceBuffer->blocksize);
     outputSource->writeSampleBlock(outputSource, sourceBuffer);
 
     freeSampleBuffer(sourceBuffer);
@@ -1022,6 +1043,7 @@ int mrsWatsonMain(ErrorReporter errorReporter, int argc, char **argv) {
     maxTimeInFrames = (unsigned long)(maxTimeInMs * getSampleRate()) / 1000l;
   }
 
+  //[MN] begin of juicy code
   processingDelayInFrames = pluginChainGetProcessingDelay(pluginChain);
   pluginChainPrepareForProcessing(pluginChain);
 
@@ -1067,13 +1089,15 @@ int mrsWatsonMain(ErrorReporter errorReporter, int argc, char **argv) {
     }
 
     pluginChainProcessAudio(pluginChain, inputSampleBuffer, outputSampleBuffer);
-
+      
     taskTimerStart(outputTimer);
 
     if (finishedReading) {
+      
+      //[MN] cutting away all whole buffers due to latency has been already taken care of in the initial writes
+      // i.e. at the end of file we can write the valid samples + the remainder of latency that fits in a buffer
       outputSampleBuffer->blocksize =
-          inputSampleBuffer
-              ->blocksize; // The input buffer size has been adjusted.
+         inputSampleBuffer ->validSamples + processingDelayInFrames % getBlocksize(); // The input buffer size has been adjusted.
       logDebug("Using buffer size of %d for final block",
                outputSampleBuffer->blocksize);
     }

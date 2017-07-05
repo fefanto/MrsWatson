@@ -32,6 +32,7 @@
 typedef struct {
   ChannelCount numChannels;
   SampleCount blocksize;
+  SampleCount validSamples;
   Samples *samples;
 } SampleBufferMembers;
 typedef SampleBufferMembers *SampleBuffer;
