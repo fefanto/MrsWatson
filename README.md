@@ -1,6 +1,17 @@
 [![Travis Build Status][travis-build-icon]][travis-build-home]
 [![AppVeyor Build status][appveyor-build-icon]][appveyor-build-home]
 
+BEWARE! --------------------------------------------------
+
+    this mrswatson version is based on mrswatson 0.9.8.
+    by teragon audio
+    the code for this version is available at :
+    https://github.com/fefanto/MrsWatson
+    the purpose of this version is :
+        - to restore the latency compensation feature
+        - to have an output file exactly the same size as the input file
+----------------------------------------------------------
+
 
 MrsWatson
 =========
