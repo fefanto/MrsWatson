@@ -13,7 +13,11 @@ BEWARE! --------------------------------------------------
         (which means that reverbs/delay tails won't work well here)
 
     this mrswatson version will be released only on windows (see bin folder)
+    NOTE: for the windows build see BUILDING.md, and also : 
+    https://stackoverflow.com/questions/14372706/visual-studio-cant-build-due-to-rc-exe%22
+    if you have problems with cmake not finding rc.exe
 ----------------------------------------------------------
+
 
 
 MrsWatson
