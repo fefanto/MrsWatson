@@ -314,10 +314,7 @@ void writeOutput(SampleSource outputSource, SampleSource silenceSource,
   unsigned long framesProcessed = framesSkipped + outputSource->numSamplesProcessed / buffer->numChannels;
   unsigned long nextBlockStart = framesProcessed + buffer->blocksize;
 
-  if (framesProcessed != getAudioClock()->currentFrame) {
-    logWarn("framesProcessed (%lu) != getAudioClock()->currentFrame (%lu)",
-            framesProcessed, getAudioClock()->currentFrame);
-  }
+  
 
   // Cut the delay at the start
   if (nextBlockStart <= skipHeadFrames) {
@@ -343,6 +340,11 @@ void writeOutput(SampleSource outputSource, SampleSource silenceSource,
     sourceBuffer->validSamples = soundFrames;
     sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, skippedFrames, sourceBuffer->validSamples);
     outputSource->writeSampleBlock(outputSource, sourceBuffer);
+
+	if (framesProcessed != getAudioClock()->currentFrame) {
+		logWarn("framesProcessed (%lu) != getAudioClock()->currentFrame (%lu)",
+			framesProcessed, getAudioClock()->currentFrame);
+	}
 
     freeSampleBuffer(sourceBuffer);
   } else {
@@ -1112,7 +1114,7 @@ int mrsWatsonMain(ErrorReporter errorReporter, int argc, char **argv) {
     writeOutput(outputSource, silentSampleOutput, outputSampleBuffer,
                 processingDelayInFrames);
     taskTimerStop(outputTimer);
-    advanceAudioClock(audioClock, outputSampleBuffer->blocksize);
+    advanceAudioClock(audioClock, outputSampleBuffer->validSamples);
   }
 
   // Close file handles for input/output sources
