@@ -36,6 +36,7 @@ nbproject/*
 *.vcxproj.filters
 *.lastbuildstate
 *.cbp
+*.ilk
 
 # Non-redistributable third-party
 vendor/vstsdk2.4/*
