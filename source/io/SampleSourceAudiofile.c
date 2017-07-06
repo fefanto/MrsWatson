@@ -216,12 +216,12 @@ boolByte _writeBlockToAudiofile(void *selfPtr,
 //                                   (int)getBlocksize());
 //  self->numSamplesProcessed += getBlocksize() * getNumChannels();
     
-  logDebug("[MN] writing (%lu) samples to file.",sampleBuffer->blocksize);
+  logDebug("[MN] writing (%lu) samples to file.",sampleBuffer->validSamples);
     
   numFramesWritten = afWriteFrames(extraData->fileHandle, AF_DEFAULT_TRACK,
                                      extraData->pcmSampleBuffer->pcmSamples,
-                                     (int)sampleBuffer->blocksize);
-  self->numSamplesProcessed += sampleBuffer->blocksize * getNumChannels();
+                                     (int)sampleBuffer->validSamples);
+  self->numSamplesProcessed += sampleBuffer->validSamples * getNumChannels();
 
 
   if (numFramesWritten == -1) {

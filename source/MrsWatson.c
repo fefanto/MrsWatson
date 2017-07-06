@@ -333,13 +333,15 @@ void writeOutput(SampleSource outputSource, SampleSource silenceSource,
     unsigned long soundFrames = nextBlockStart - skipHeadFrames;
 
     // Cutting away start part of the block.
-    sourceBuffer->blocksize = skippedFrames;
-    sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, 0,sourceBuffer->blocksize);
+    //sourceBuffer->blocksize = skippedFrames;
+    sourceBuffer->validSamples = skippedFrames;
+    sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, 0,sourceBuffer->validSamples);
     silenceSource->writeSampleBlock(silenceSource, sourceBuffer);
 
     // Writing remaining end part of the block.
-    sourceBuffer->blocksize = soundFrames;
-    sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, skippedFrames, sourceBuffer->blocksize);
+    //sourceBuffer->blocksize = soundFrames;
+    sourceBuffer->validSamples = soundFrames;
+    sampleBufferCopyAndMapChannelsWithOffset(sourceBuffer, 0, buffer, skippedFrames, sourceBuffer->validSamples);
     outputSource->writeSampleBlock(outputSource, sourceBuffer);
 
     freeSampleBuffer(sourceBuffer);
@@ -1091,15 +1093,20 @@ int mrsWatsonMain(ErrorReporter errorReporter, int argc, char **argv) {
     pluginChainProcessAudio(pluginChain, inputSampleBuffer, outputSampleBuffer);
       
     taskTimerStart(outputTimer);
+    
+    outputSampleBuffer->validSamples = inputSampleBuffer->validSamples;
 
     if (finishedReading) {
       
       //[MN] cutting away all whole buffers due to latency has been already taken care of in the initial writes
       // i.e. at the end of file we can write the valid samples + the remainder of latency that fits in a buffer
-      outputSampleBuffer->blocksize =
-         inputSampleBuffer ->validSamples + processingDelayInFrames % getBlocksize(); // The input buffer size has been adjusted.
+//      outputSampleBuffer->blocksize =
+//         inputSampleBuffer ->validSamples + processingDelayInFrames % getBlocksize(); // The input buffer size has been adjusted.
+        
+      outputSampleBuffer->validSamples += processingDelayInFrames % getBlocksize();
+ 
       logDebug("Using buffer size of %d for final block",
-               outputSampleBuffer->blocksize);
+               outputSampleBuffer->validSamples);
     }
 
     writeOutput(outputSource, silentSampleOutput, outputSampleBuffer,
